@@ -3,7 +3,7 @@ using DataFrames
 module QuantileRegression
 
     import StatsModels: DataFrameRegressionModel, Formula, coef, @formula
-    #import LinearAlgebra.BLAS.axpy!
+    import LinearAlgebra: BLAS, qr, Diagonal, mul!, norm
     export qreg, coef, vcov, stderr, quantiles, IP, IRLS, @formula
 
     using DataFrames, Distributions, LinearAlgebra, StatsModels, StatsBase
