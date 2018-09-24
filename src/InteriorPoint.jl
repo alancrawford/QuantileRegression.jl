@@ -1,6 +1,8 @@
 #  Due to @andreasnoack in PR #7 (modified)
 macro atleastversion(x)
-    if eval(x) >= v"0.4-"
+    if eval(x) >= v"0.7-"
+        return :(LinearAlgebra.qr(Q*X, Val(true)))
+    elseif eval(x) >= v"0.4-"
         return :(qrfact(Q*X, Val{true}))
     else
         return :(qrfact(Q*X, pivot = true))
@@ -22,7 +24,7 @@ end
 function bound(x, dx)
 # Fill vector with allowed step lengths
 # Replace with -x/dx for negative dx
-    b = 1e20 + 0.0 * x
+    b = 1e20 .+ 0.0 * x
     for i = 1:length(dx)
         if dx[i] < 0.0
             @inbounds b[i] = -x[i] / dx[i]
@@ -61,7 +63,7 @@ r = c - X*y
 BLAS.axpy!(0.001, (r .== 0.0).*1.0, r)
 z = r .* (r .> 0.0)
 w = z - r
-gap = Base.LinAlg.BLAS.dot(c, x) - Base.LinAlg.BLAS.dot(y, b) + Base.LinAlg.BLAS.dot(w, u)
+gap = BLAS.dot(c, x) - BLAS.dot(y, b) + BLAS.dot(w, u)
 
 # Start iterations
 it = 0
@@ -71,13 +73,13 @@ for it = 1:max_it
     r = z - w
     Q = Diagonal(sqrt.(q)) # Very efficient to do since Q diagonal
     # AQtF = @atleastversion(VERSION)
-    AQtF = qrfact(Q*X, Val{true}) # PE 2004
+    AQtF = LinearAlgebra.qr(Q*X, Val(true)) # PE 2004
     rhs = Q*r        # "
     dy = AQtF\rhs   # "
     dx = q.*(X*dy - r)
     ds = -dx
-    dz = -z .* (1 + dx ./ x)
-    dw = -w .* (1 + ds ./ s)
+    dz = -z .* (1 .+ dx ./ x)
+    dw = -w .* (1 .+ ds ./ s)
 
     # Compute maximum allowable step lengths
     fx = bound(x, dx)
@@ -93,8 +95,8 @@ for it = 1:max_it
     if min.(fp, fd) < 1.0
 
         # Update mu
-        mu = Base.LinAlg.BLAS.dot(z, x) + Base.LinAlg.BLAS.dot(w, s)
-        g = Base.LinAlg.BLAS.dot(z + fd*dz, x + fp*dx) + Base.LinAlg.BLAS.dot(w + fd*dw, s + fp*ds)
+        mu = BLAS.dot(z, x) + BLAS.dot(w, s)
+        g = BLAS.dot(z + fd*dz, x + fp*dx) + BLAS.dot(w + fd*dw, s + fp*ds)
         mu = mu * (g / mu)^3 / (2 * n)
 
         # Compute modified step
@@ -133,7 +135,7 @@ for it = 1:max_it
     BLAS.axpy!(fd, dw, w)
     BLAS.axpy!(fd, dz, z)
 
-    gap = Base.LinAlg.BLAS.dot(c, x) - Base.LinAlg.BLAS.dot(y, b) + Base.LinAlg.BLAS.dot(w, u)
+    gap = BLAS.dot(c, x) - BLAS.dot(y, b) + BLAS.dot(w, u)
 
     if gap < small
         break
