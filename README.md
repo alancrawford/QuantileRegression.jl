@@ -25,7 +25,7 @@ df = DataFrame(load("http://vincentarelbundock.github.io/Rdatasets/csv/quantreg/
 
 # Do quantile regression
 using QuantileRegression
-ResultQR = qreg(@formula(foodexp~income), df, .5);
+ResultQR = qreg(@formula(foodexp~income), df, .5)
 ```
 
 Below is the resulting Quantile regression output:
